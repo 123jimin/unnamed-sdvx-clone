@@ -4,7 +4,8 @@
 DefineEnum(InputDevice,
 	Keyboard,
 	Mouse,
-	Controller)
+	Controller,
+	DualMouse)
 
 typedef Ref<int32> MouseLockHandle;
 

@@ -4,9 +4,10 @@
 #include "Image.hpp"
 #include "Gamepad_Impl.hpp"
 
-
 namespace Graphics
 {
+	static void _onWindowsMessage(void* userData, void* hWnd, unsigned int message, uint64 wParam, int64 lParam);
+
 	/* SDL Instance singleton */
 	class SDL
 	{
@@ -59,6 +60,24 @@ namespace Graphics
 			m_window = SDL_CreateWindow(*titleUtf8, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 				m_clntSize.x, m_clntSize.y, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
 			assert(m_window);
+
+#ifdef _WIN32
+			{
+				SDL_SetWindowsMessageHook(_onWindowsMessage, this);
+
+				RAWINPUTDEVICE device[1];
+
+				device[0].usUsagePage = 1; // generic desktop controls
+				device[0].usUsage = 2; // mouse
+				device[0].dwFlags = 0;
+				device[0].hwndTarget = NULL;
+
+				if (RegisterRawInputDevices(device, 1, sizeof(RAWINPUTDEVICE)) == FALSE)
+				{
+					Log("Failed to register mouse device...", Logger::Severity::Warning);
+				}
+			}
+#endif
 
 			uint32 numJoysticks = SDL_NumJoysticks();
 			if(numJoysticks == 0)
@@ -168,6 +187,33 @@ namespace Graphics
 
 		void SetWindowStyle(WindowStyle style)
 		{
+		}
+
+		void OnWindowsMessage(void* hWnd, unsigned int message, uint64 wParam, int64 lParam)
+		{
+#ifdef _WIN32
+			if (message == WM_INPUT && GET_RAWINPUT_CODE_WPARAM(wParam) == RIM_INPUT)
+			{
+				UINT dataSize;
+				GetRawInputData((HRAWINPUT)lParam, RID_INPUT, NULL, &dataSize, sizeof(RAWINPUTHEADER));
+
+				if (dataSize == 0) return;
+
+				Buffer buffer(static_cast<size_t>(dataSize));
+				void* dataBuf = &(buffer.front());
+				GetRawInputData((HRAWINPUT)lParam, RID_INPUT, dataBuf, &dataSize, sizeof(RAWINPUTHEADER));
+
+				const RAWINPUT* raw = (const RAWINPUT*) dataBuf;
+				if (raw->header.dwType == RIM_TYPEMOUSE)
+				{
+					HANDLE deviceHandle = raw->header.hDevice;
+					const RAWMOUSE& mouseData = raw->data.mouse;
+					LONG x = mouseData.lLastX, y = mouseData.lLastY;
+
+					Logf("Mouse: 0x%08X X=%d Y=%d", Logger::Severity::Normal, deviceHandle, x, y);
+				}
+			}
+#endif
 		}
 
 		/* input handling */
@@ -364,6 +410,7 @@ namespace Graphics
 					m_textComposition.selectionLength = evt.edit.length;
 					outer.OnTextComposition.Call(m_textComposition);
 				}
+
 				outer.OnAnyEvent.Call(evt);
 			}
 			return !m_closed;
@@ -648,6 +695,12 @@ namespace Graphics
 	bool Window::GetRelativeMouseMode()
 	{
 		return SDL_GetRelativeMouseMode() == SDL_TRUE;
+	}
+
+	static void _onWindowsMessage(void* userData, void* hWnd, unsigned int message, uint64 wParam, int64 lParam)
+	{
+		if(userData != nullptr)
+			(static_cast<Window_Impl*>(userData))->OnWindowsMessage(hWnd, message, wParam, lParam);
 	}
 }
 
