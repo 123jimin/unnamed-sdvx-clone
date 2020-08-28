@@ -220,11 +220,12 @@ namespace Graphics
 					}
 
 					outer.OnDualMouseMotion.Call(mouseIndex, x, y);
-					if (mouseData.ulButtons != 0)
-					{
-						Logf("Mouse: %d X=%d Y=%d B=%d D=%hd F=%hd", Logger::Severity::Normal, mouseIndex, x, y,
-							mouseData.ulButtons, mouseData.usButtonData, mouseData.usFlags);
-					}
+					if (mouseData.ulButtons & 1) outer.OnDualMousePressed.Call(mouseIndex, MouseButton::Left);
+					if (mouseData.ulButtons & 2) outer.OnDualMouseReleased.Call(mouseIndex, MouseButton::Left);
+					if (mouseData.ulButtons & 4) outer.OnDualMousePressed.Call(mouseIndex, MouseButton::Right);
+					if (mouseData.ulButtons & 8) outer.OnDualMouseReleased.Call(mouseIndex, MouseButton::Right);
+					if (mouseData.ulButtons & 16) outer.OnDualMousePressed.Call(mouseIndex, MouseButton::Middle);
+					if (mouseData.ulButtons & 32) outer.OnDualMouseReleased.Call(mouseIndex, MouseButton::Middle);
 				}
 			}
 #endif

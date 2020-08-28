@@ -52,7 +52,10 @@ public:
 	virtual void OnKeyPressed(SDL_Scancode code);
 	virtual void OnKeyReleased(SDL_Scancode code);
 	virtual void OnMouseMotion(int32 x, int32 y);
+
 	virtual void OnDualMouseMotion(int index, int32 x, int32 y);
+	virtual void OnDualMousePressed(int index, Graphics::MouseButton mouseButton);
+	virtual void OnDualMouseReleased(int index, Graphics::MouseButton mouseButton);
 
 	// Request laser input state
 	float GetInputLaserDir(uint32 laserIdx);

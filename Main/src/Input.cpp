@@ -39,9 +39,15 @@ void Input::Init(Graphics::Window& wnd)
 		m_window->OnMouseMotion.Add(this, &Input::OnMouseMotion);
 	}
 
-	if(m_laserDevice == InputDevice::DualMouse)
+	if (m_laserDevice == InputDevice::DualMouse)
 	{
 		m_window->OnDualMouseMotion.Add(this, &Input::OnDualMouseMotion);
+	}
+
+	if(m_buttonDevice == InputDevice::DualMouse)
+	{
+		m_window->OnDualMousePressed.Add(this, &Input::OnDualMousePressed);
+		m_window->OnDualMouseReleased.Add(this, &Input::OnDualMouseReleased);
 	}
 
 	// Init controller mapping
@@ -80,7 +86,11 @@ void Input::Cleanup()
 		m_window->OnKeyPressed.RemoveAll(this);
 		m_window->OnKeyReleased.RemoveAll(this);
 		m_window->OnMouseMotion.RemoveAll(this);
+
 		m_window->OnDualMouseMotion.RemoveAll(this);
+		m_window->OnDualMousePressed.RemoveAll(this);
+		m_window->OnDualMouseReleased.RemoveAll(this);
+
 		m_window = nullptr;
 	}
 }
@@ -261,7 +271,7 @@ void Input::m_InitKeyboardMapping()
 	memset(m_buttonStates, 0, sizeof(m_buttonStates));
 	m_buttonMap.clear();
 
-	if(m_buttonDevice == InputDevice::Keyboard)
+	if(m_buttonDevice == InputDevice::Keyboard || m_buttonDevice == InputDevice::DualMouse)
 	{
 		// Button mappings
 		m_buttonMap.Add(g_gameConfig.GetInt(GameConfigKeys::Key_BTS), Button::BT_S);
@@ -404,4 +414,24 @@ void Input::OnMouseMotion(int32 x, int32 y)
 void Input::OnDualMouseMotion(int index, int32 x, int32 y)
 {
 	m_mousePos[index] += x;
+}
+
+void Input::OnDualMousePressed(int index, Graphics::MouseButton mouseButton)
+{
+	switch (mouseButton)
+	{
+	case Graphics::MouseButton::Left: m_OnButtonInput(index == 0 ? Button::BT_0 : Button::BT_2, true); break;
+	case Graphics::MouseButton::Right: m_OnButtonInput(index == 0 ? Button::BT_1 : Button::BT_3, true); break;
+	case Graphics::MouseButton::Middle: m_OnButtonInput(index == 0 ? Button::FX_0 : Button::FX_1, true); break;
+	}
+}
+
+void Input::OnDualMouseReleased(int index, Graphics::MouseButton mouseButton)
+{
+	switch (mouseButton)
+	{
+	case Graphics::MouseButton::Left: m_OnButtonInput(index == 0 ? Button::BT_0 : Button::BT_2, false); break;
+	case Graphics::MouseButton::Right: m_OnButtonInput(index == 0 ? Button::BT_1 : Button::BT_3, false); break;
+	case Graphics::MouseButton::Middle: m_OnButtonInput(index == 0 ? Button::FX_0 : Button::FX_1, false); break;
+	}
 }
