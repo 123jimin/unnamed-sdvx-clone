@@ -192,7 +192,7 @@ namespace Graphics
 		void OnWindowsMessage(void* hWnd, unsigned int message, uint64 wParam, int64 lParam)
 		{
 #ifdef _WIN32
-			if (message == WM_INPUT && GET_RAWINPUT_CODE_WPARAM(wParam) == RIM_INPUT)
+			if (message == WM_INPUT)
 			{
 				UINT dataSize;
 				GetRawInputData((HRAWINPUT)lParam, RID_INPUT, NULL, &dataSize, sizeof(RAWINPUTHEADER));
@@ -206,11 +206,25 @@ namespace Graphics
 				const RAWINPUT* raw = (const RAWINPUT*) dataBuf;
 				if (raw->header.dwType == RIM_TYPEMOUSE)
 				{
-					HANDLE deviceHandle = raw->header.hDevice;
+					const uint64 deviceHandle = reinterpret_cast<uint64>(raw->header.hDevice);
 					const RAWMOUSE& mouseData = raw->data.mouse;
 					LONG x = mouseData.lLastX, y = mouseData.lLastY;
 
-					Logf("Mouse: 0x%08X X=%d Y=%d", Logger::Severity::Normal, deviceHandle, x, y);
+					int mouseIndex = 0;
+					if (m_mouse[0] == deviceHandle) mouseIndex = 0;
+					else if (m_mouse[1] == deviceHandle) mouseIndex = 1;
+					else {
+						mouseIndex = m_mouseIndex;
+						m_mouseIndex = 1 ^ m_mouseIndex;
+						m_mouse[mouseIndex] = deviceHandle;
+					}
+
+					outer.OnDualMouseMotion.Call(mouseIndex, x, y);
+					if (mouseData.ulButtons != 0)
+					{
+						Logf("Mouse: %d X=%d Y=%d B=%d D=%hd F=%hd", Logger::Severity::Normal, mouseIndex, x, y,
+							mouseData.ulButtons, mouseData.usButtonData, mouseData.usFlags);
+					}
 				}
 			}
 #endif
@@ -494,6 +508,9 @@ namespace Graphics
 		uint32 m_style;
 		Vector2i m_clntSize;
 		WString m_caption;
+
+		uint64 m_mouse[2] = { 0, 0 };
+		int m_mouseIndex = 0;
 	};
 
 	Window::Window(Vector2i size, uint8 samplecount)

@@ -109,6 +109,12 @@ namespace Graphics
 		Delegate<MouseButton> OnMouseReleased;
 		Delegate<int32, int32> OnMouseMotion;
 		Delegate<SDL_Event> OnAnyEvent;
+
+		// For dual-mouse setting
+		Delegate<int, MouseButton> OnDualMousePressed;
+		Delegate<int, MouseButton> OnDualMouseReleased;
+		Delegate<int, int32, int32> OnDualMouseMotion;
+
 		// Mouse scroll wheel 
 		//	Positive for scroll down
 		//	Negative for scroll up

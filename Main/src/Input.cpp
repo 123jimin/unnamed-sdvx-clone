@@ -15,11 +15,6 @@ void Input::Init(Graphics::Window& wnd)
 	m_window = &wnd;
 	m_window->OnKeyPressed.Add(this, &Input::OnKeyPressed);
 	m_window->OnKeyReleased.Add(this, &Input::OnKeyReleased);
-	m_window->OnMouseMotion.Add(this, &Input::OnMouseMotion);
-
-
-	m_lastMousePos[0] = m_window->GetMousePos().x;
-	m_lastMousePos[1] = m_window->GetMousePos().y;
 
 	m_laserDevice = g_gameConfig.GetEnum<Enum_InputDevice>(GameConfigKeys::LaserInputDevice);
 	m_buttonDevice = g_gameConfig.GetEnum<Enum_InputDevice>(GameConfigKeys::ButtonInputDevice);
@@ -38,6 +33,16 @@ void Input::Init(Graphics::Window& wnd)
 	m_controllerDirectMode = g_gameConfig.GetBool(GameConfigKeys::Controller_DirectMode);
 	m_backComboHold = g_gameConfig.GetEnum<Enum_ButtonComboModeSettings>(GameConfigKeys::UseBackCombo) == ButtonComboModeSettings::Hold;
 	m_backComboInstant = g_gameConfig.GetEnum<Enum_ButtonComboModeSettings>(GameConfigKeys::UseBackCombo) == ButtonComboModeSettings::Instant;
+
+	if (m_laserDevice == InputDevice::Mouse)
+	{
+		m_window->OnMouseMotion.Add(this, &Input::OnMouseMotion);
+	}
+
+	if(m_laserDevice == InputDevice::DualMouse)
+	{
+		m_window->OnDualMouseMotion.Add(this, &Input::OnDualMouseMotion);
+	}
 
 	// Init controller mapping
 	if(m_laserDevice == InputDevice::Controller || m_buttonDevice == InputDevice::Controller)
@@ -75,6 +80,7 @@ void Input::Cleanup()
 		m_window->OnKeyPressed.RemoveAll(this);
 		m_window->OnKeyReleased.RemoveAll(this);
 		m_window->OnMouseMotion.RemoveAll(this);
+		m_window->OnDualMouseMotion.RemoveAll(this);
 		m_window = nullptr;
 	}
 }
@@ -101,7 +107,7 @@ void Input::Update(float deltaTime)
 		m_window->SetRelativeMouseMode(false);
 	}
 
-	if(m_laserDevice == InputDevice::Mouse)
+	if(m_laserDevice == InputDevice::Mouse || m_laserDevice == InputDevice::DualMouse)
 	{
 		for(uint32 i = 0; i < 2; i++)
 		{
@@ -393,4 +399,9 @@ void Input::OnMouseMotion(int32 x, int32 y)
 {
 	m_mousePos[0] += x;
 	m_mousePos[1] += y;
+}
+
+void Input::OnDualMouseMotion(int index, int32 x, int32 y)
+{
+	m_mousePos[index] += x;
 }
