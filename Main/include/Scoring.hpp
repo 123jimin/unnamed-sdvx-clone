@@ -21,7 +21,9 @@ enum class TickFlags : uint8
 	Slam = 0x20,
 
 	// Used to make hit effects appear correctly for holds
-	Ignore = 0x40
+	Ignore = 0x40,
+
+	Processed = 0x80
 };
 TickFlags operator|(const TickFlags& a, const TickFlags& b);
 TickFlags operator&(const TickFlags& a, const TickFlags& b);
@@ -317,6 +319,7 @@ private:
 
 	// Offet to use for calculating judge (ms)
 	int32 m_inputOffset = 0;
+	int32 m_laserOffset = 0;
 	int32 m_bounceGuard = 0;
 	float m_drainMultiplier = 1.0f;
 	MapTime m_endTime = 180000;
