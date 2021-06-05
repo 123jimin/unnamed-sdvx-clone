@@ -95,10 +95,12 @@ namespace Graphics
 						Logf("[%d] <failed to open>", Logger::Severity::Warning, i);
 						continue;
 					}
-					String deviceName = SDL_JoystickName(joystick);
 
-					Logf("[%d] \"%s\" (%d buttons, %d axes, %d hats)", Logger::Severity::Info,
-						 i, deviceName, SDL_JoystickNumButtons(joystick), SDL_JoystickNumAxes(joystick), SDL_JoystickNumHats(joystick));
+					const String deviceName = SDL_JoystickName(joystick);
+					const String joystickGUID = JoystickGUID(joystick).ToString();
+
+					Logf("[%d] %s \"%s\" (%d buttons, %d axes, %d hats)", Logger::Severity::Info,
+						 i, joystickGUID.data(), deviceName.data(), SDL_JoystickNumButtons(joystick), SDL_JoystickNumAxes(joystick), SDL_JoystickNumHats(joystick));
 
 					SDL_JoystickClose(joystick);
 				}
@@ -592,7 +594,8 @@ namespace Graphics
 
 		// Gamepad input
 		Map<int32, Ref<Gamepad_Impl>> m_gamepads;
-		Map<SDL_JoystickID, Gamepad_Impl *> m_joystickMap;
+		Map<SDL_JoystickID, Gamepad_Impl*> m_joystickMap;
+		Map<JoystickGUID, Gamepad_Impl*> m_joystickGUIDMap;
 
 		// Text input / IME stuff
 		TextComposition m_textComposition;
@@ -743,50 +746,37 @@ namespace Graphics
 	{
 		return SDL_NumJoysticks();
 	}
-	Vector<String> Window::GetGamepadDeviceNames() const
-	{
-		Vector<String> ret;
-		uint32 numJoysticks = SDL_NumJoysticks();
-		for (uint32 i = 0; i < numJoysticks; i++)
-		{
-			SDL_Joystick *joystick = SDL_JoystickOpen(i);
-			if (!joystick)
-			{
-				continue;
-			}
-			String deviceName = SDL_JoystickName(joystick);
-			ret.Add(deviceName);
-
-			SDL_JoystickClose(joystick);
-		}
-		return ret;
-	}
 
 	Ref<Gamepad> Window::OpenGamepad(int32 deviceIndex)
 	{
-		Ref<Gamepad_Impl> *openGamepad = m_impl->m_gamepads.Find(deviceIndex);
-		if (openGamepad)
+		if (Ref<Gamepad_Impl>* openGamepad = m_impl->m_gamepads.Find(deviceIndex))
+		{
 			return Utility::CastRef<Gamepad_Impl, Gamepad>(*openGamepad);
-		Ref<Gamepad_Impl> newGamepad;
+		}
 
-		Gamepad_Impl *gamepadImpl = new Gamepad_Impl();
+		Ref<Gamepad_Impl> newGamepad = nullptr;
+		Gamepad_Impl* gamepadImpl = new Gamepad_Impl();
+
 		// Try to initialize new device
 		if (gamepadImpl->Init(this, deviceIndex))
 		{
 			newGamepad = Ref<Gamepad_Impl>(gamepadImpl);
-
-			// Receive joystick events
-			SDL_JoystickEventState(SDL_ENABLE);
 		}
 		else
 		{
 			delete gamepadImpl;
+			return nullptr;
 		}
-		if (newGamepad)
-		{
-			m_impl->m_gamepads.Add(deviceIndex, newGamepad);
-			m_impl->m_joystickMap.Add(SDL_JoystickInstanceID(gamepadImpl->m_joystick), gamepadImpl);
-		}
+
+		assert(newGamepad);
+
+		m_impl->m_gamepads.Add(deviceIndex, newGamepad);
+		m_impl->m_joystickMap.Add(SDL_JoystickInstanceID(gamepadImpl->m_joystick), gamepadImpl);
+		m_impl->m_joystickGUIDMap.emplace(SDL_JoystickGetGUID(gamepadImpl->m_joystick), gamepadImpl);
+
+		// Receive joystick events
+		SDL_JoystickEventState(SDL_ENABLE);
+
 		return Utility::CastRef<Gamepad_Impl, Gamepad>(newGamepad);
 	}
 
